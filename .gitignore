@@ -1,0 +1,36 @@
+# N8N Workflows - Gitignore
+
+# Credenciales sensibles
+*.cred
+credentials/
+.env
+.env.local
+
+# Archivos temporales de n8n
+.n8n/
+temp/
+logs/
+
+# Archivos de backup temporales
+backup_*.zip
+*.backup
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node modules si usas extensiones personalizadas
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Archivos específicos de Windows
+*.lnk
