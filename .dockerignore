@@ -1,0 +1,18 @@
+# Archivos de entorno
+.env.local
+.env.production
+
+# Datos de Docker (si decides usar bind mounts en lugar de volúmenes)
+data/
+
+# Logs
+logs/
+*.log
+
+# Backups temporales
+backups/*.tmp
+
+# Credenciales sensibles
+*.key
+*.pem
+*.p12
