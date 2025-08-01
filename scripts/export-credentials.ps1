@@ -2,8 +2,7 @@ param(
     [string] $OutputFolder = "C:\Users\javil\OneDrive - UNIVERSIDAD DE MURCIA\Trabajo\Digio\n8n"
 )
 
-$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$outputFile = Join-Path $OutputFolder "credentials_$timestamp.json"
+$outputFile = Join-Path $OutputFolder "credentials"
 
 n8n export:credentials --all --pretty --separate --output $outputFile
 
