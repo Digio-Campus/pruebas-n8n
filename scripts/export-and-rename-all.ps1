@@ -2,22 +2,23 @@ param(
     [string] $OutputFolder = "C:\Users\javil\OneDrive - UNIVERSIDAD DE MURCIA\Trabajo\Digio\n8n"
 )
 
-$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$backupFolder = Join-Path $OutputFolder "backup_workflows_$timestamp"
-New-Item -ItemType Directory -Path $backupFolder | Out-Null
+$backupFolder = Join-Path $OutputFolder "workflows"
+# Crear carpeta de backup
 
-# Exportar todos los workflows en un solo archivo temporal
-$tempFile = Join-Path $backupFolder "temp_all.json"
-n8n export:workflow --all --pretty --output $tempFile
-
-# Leer todos los workflows del JSON y exportarlos individualmente
-$workflows = Get-Content $tempFile -Raw | ConvertFrom-Json
-foreach ($wf in $workflows) {
-    $nameClean = $wf.name -replace '[<>:"/\\|?*]', '_'
-    $filename = "$nameClean.json"
-    $wf | ConvertTo-Json -Depth 100 | Out-File -Encoding utf8 "$backupFolder\$filename"
+if (!(Test-Path -Path $backupFolder)) {
+    New-Item -ItemType Directory -Path $backupFolder | Out-Null
 }
 
-Remove-Item $tempFile
+# Exportar todos los workflows por ID 
+n8n export:workflow --all --pretty --separate --output $backupFolder
+
+# Leer todos los workflows del JSON y renombrarlos individualmente
+$workflows = Get-ChildItem -Path $backupFolder -Filter "*.json"
+foreach ($file in $workflows) {
+    $wf = Get-Content $file.FullName -Raw | ConvertFrom-Json
+    $nameClean = $wf.name -replace '[<>:"/\\|?*]', '_'
+    $filename = "$nameClean.json"
+    Move-Item -Path $file.FullName -Destination (Join-Path $backupFolder $filename) -Force
+}
 
 Write-Host "Backup completo en $backupFolder"
