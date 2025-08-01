@@ -1,46 +1,39 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string] $WorkflowId,
+    [string] $Id,
 
-    [string] $OutputFolder = "C:\Users\javil\OneDrive - UNIVERSIDAD DE MURCIA\Trabajo\Digio\n8n"
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('c', 'credentials', 'w', 'workflow')]
+    [string] $Type = 'w', # Default to workflows
+
+    [string] $OutputFolder = "$PWD" # Default to current directory
 )
 
+# Verificar si es credenciales o workflows
+if ($Type -eq 'c' -or $Type -eq 'credentials') {
+    $Type = 'credentials'
+    $backupFolder = Join-Path $OutputFolder "credentials"
+    Write-Host "Exportando credenciales en $backupFolder"
+} else {
+    $Type = 'workflow'
+    $backupFolder = Join-Path $OutputFolder "workflows"
+}
+
 # Crear carpeta si no existe
-$backupFolder = Join-Path $OutputFolder "workflows"
 if (!(Test-Path -Path $backupFolder)) {
     New-Item -ItemType Directory -Path $backupFolder | Out-Null
 }
 
+# 1. Exportar el workflow/credencial con "pretty" formateado
+Write-Host "Exportando $Type con ID $Id..."
+n8n export:$Type --id=$Id --separate --output="$backupFolder" --pretty
 
-# 1. Exportar el workflow con "pretty" formateado
-Write-Host "Exportando workflow ID $WorkflowId..."
-n8n export:workflow --id=$WorkflowId --output="$backupFolder\$WorkflowId.json" --pretty
 
 # 2. Leer e interpretar JSON
-$fullpath = "$backupFolder\$WorkflowId.json"
-if (!(Test-Path -Path $fullpath)) {
-    Write-Error "El archivo exportado no se encontró: $fullpath"
-    exit 1
-}
-
+$fullpath = "$backupFolder\$Id.json"
 $json = Get-Content $fullpath -Raw | ConvertFrom-Json
-$wfName = $json[0].name
-if (-not $wfName) {
-    Write-Error "No se encontró el campo 'name' en el JSON."
-    exit 1
-}
+$nameClean = $json[0].name -replace '[<>:"/\\|?*]', '_'
+$newName = "$nameClean.json"
+Move-Item -Path $fullpath -Destination (Join-Path $backupFolder $newName) -Force
 
-# Sanitizar nombre de archivo (sin caracteres inválidos)
-$wfNameClean = $wfName -replace '[<>:"/\\|?*]', '_'
-
-$newName = "$wfNameClean.json"
-$destPath = Join-Path $backupFolder $newName
-
-# 3. Renombrar (si existe, sobrescribir)
-if (Test-Path -Path $destPath) {
-    Remove-Item -Path $destPath -Force
-}
-
-Rename-Item -Path $fullpath -NewName $newName
-
-Write-Host "Workflow renombrado a $newName en $backupFolder"
+Write-Host "$Type renombrado a $newName en $backupFolder"

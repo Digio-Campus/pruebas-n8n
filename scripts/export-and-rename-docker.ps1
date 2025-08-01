@@ -1,45 +1,46 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string] $WorkflowId,
+    [string] $Id,
 
-    [string] $OutputFolder = "C:\Users\javil\OneDrive - UNIVERSIDAD DE MURCIA\Trabajo\Digio\n8n"
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('c', 'credentials', 'w', 'workflow')]
+    [string] $Type = 'w', # Default to workflows
+
+    [string] $OutputFolder = "$PWD" # Default to current directory
 )
 
+# Verificar si es credenciales o workflows
+if ($Type -eq 'c' -or $Type -eq 'credentials') {
+    $Type = 'credentials'
+    $backupFolder = Join-Path $OutputFolder "credentials"
+    Write-Host "Exportando credenciales en $backupFolder"
+} else {
+    $Type = 'workflow'
+    $backupFolder = Join-Path $OutputFolder "workflows"
+}
+
 # Crear carpeta si no existe
-$backupFolder = Join-Path $OutputFolder "workflows"
 if (!(Test-Path -Path $backupFolder)) {
     New-Item -ItemType Directory -Path $backupFolder | Out-Null
 }
 
 # 1. Exportar el workflow con "pretty" formateado usando Docker
-Write-Host "Exportando workflow ID $WorkflowId usando Docker..."
-docker-compose exec n8n n8n export:workflow --id=$WorkflowId --output="/tmp/$WorkflowId.json" --pretty
+Write-Host "Exportando $Type con ID $Id usando Docker..."
+docker-compose exec n8n mkdir -p /tmp/exports
+docker-compose exec n8n n8n export:$Type --id=$Id --separate --output="/tmp/exports/" --pretty
 
 # 2. Copiar el archivo del contenedor al host
 Write-Host "Copiando archivo desde contenedor..."
-docker cp n8n:/tmp/$WorkflowId.json "$backupFolder\$WorkflowId.json"
+docker cp n8n:/tmp/exports/$Id.json "$backupFolder\$Id.json"
 
-# 3. Leer e interpretar JSON
-$fullpath = "$backupFolder\$WorkflowId.json"
-if (!(Test-Path -Path $fullpath)) {
-    Write-Error "El archivo exportado no se encontró: $fullpath"
-    exit 1
-}
+# 3. Limpiar archivo temporal del contenedor
+docker-compose exec n8n rm -rf "/tmp/exports/"
 
-$json = Get-Content -Path $fullpath -Raw | ConvertFrom-Json
-$wfName = $json[0].name
-if (-not $wfName) {
-    Write-Error "No se encontró el campo 'name' en el JSON."
-    exit 1
-}
-# 4. Limpiar nombre para que sea válido como filename
-$cleanName = $wfName -replace '[<>:"/\\|?*]', '_'
-$newFilename = "$cleanName.json"
-$newPath = Join-Path $backupFolder $newFilename
+# 4. Leer e interpretar JSON
+$fullpath = "$backupFolder\$Id.json"
+$json = Get-Content $fullpath -Raw | ConvertFrom-Json
+$nameClean = $json[0].name -replace '[<>:"/\\|?*]', '_'
+$newName = "$nameClean.json"
+Move-Item -Path $fullpath -Destination (Join-Path $backupFolder $newName) -Force
 
-# 6. Renombrar archivo
-Move-Item -Path $fullpath -Destination $newPath -Force
-Write-Host "Workflow exportado y renombrado a: $newFilename"
-
-# 7. Limpiar archivo temporal del contenedor
-docker-compose exec n8n rm -f "/tmp/$WorkflowId.json"
+Write-Host "$Type renombrado a $newName en $backupFolder"
