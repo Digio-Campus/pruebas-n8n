@@ -1,0 +1,959 @@
+{
+  "createdAt": "2025-07-24T08:14:52.912Z",
+  "updatedAt": "2025-07-29T10:18:02.000Z",
+  "id": "0jtJdHD3fD86wYx8",
+  "name": "RAG casos",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=You are an AI assistant that helps users interact with a vector-based document database. You have access to two tools:\n\n1. ListMetadata: Use this tool to retrieve metadata about documents in the vector database. This includes information like document IDs, titles, sources, tags, or creation dates.\n\n2. RAGQuery: Use this tool when the user asks a question that requires information from the content of documents. This tool performs a semantic search using vector embeddings and generates an answer based on the retrieved documents.\n\nWhen using RAGQuery, users often express their needs as natural language questions or informal queries. Before calling the tool, you should interpret and rephrase the user's request into a concise, document-oriented query. This helps the system retrieve the most relevant documents.\n\nFor example:\n\n- User: \"Hay un fuego en el almacén, ¿qué tengo que hacer?\"\n  → Rephrased Query: \"Procedimiento de actuación ante un fuego en el almacén\"\n\n- User: \"Me pueden sancionar si no llevo el casco?\"\n  → Rephrased Query: \"Normativa sobre uso obligatorio de casco y sanciones\"\n\nUse ListMetadata when the user:\n\n- Wants to browse or explore what documents are available.\n\n- Asks for summaries, sources, document counts, titles, dates, or tags.\n\n- Asks about metadata fields like document count, titles, dates, tags, etc.\n\nUse RAGQuery when the user:\n\n- Asks a specific question that likely requires reading or understanding the contents of the documents.\n\n- Needs procedures, policies, rules, or other internal information.\n\n- Wants a detailed or context-based answer derived from the stored documents.\n\nBe transparent with the user about where the information comes from (metadata vs. content), and choose the appropriate tool based on their intent. If you're unsure, first clarify the user’s goal before proceeding.\n\nAnswer in the same language you are spoken to."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -1168,
+        1904
+      ],
+      "id": "bd6cab4c-ed08-4fa4-aed4-afa77094ed41",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        -1152,
+        2112
+      ],
+      "id": "fc33c1d4-e154-4f50-9295-b77e893d6bc4",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "lWfoQwGtpIzJoKBa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Upload your data to test RAG",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Upload your file(s)",
+              "fieldType": "file",
+              "acceptFileTypes": ".pdf, .csv, .txt",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "00673c60-1315-4061-8cdd-7bec4ed85308",
+      "name": "Upload your file here",
+      "type": "n8n-nodes-base.formTrigger",
+      "position": [
+        -2448,
+        2432
+      ],
+      "webhookId": "82848bc4-5ea2-4e5a-8bb6-3c09b94a8c5d",
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "fileName",
+                "value": "={{ $('Upload your file here').item.json[\"Upload your file(s)\"][0].filename }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -1904,
+        2640
+      ],
+      "id": "36e90850-87c0-48a0-8630-dba94a0382c6",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        -2064,
+        2640
+      ],
+      "id": "9751e0e9-b565-41a3-b7f0-b774fead51f3",
+      "name": "Embeddings Ollama",
+      "credentials": {
+        "ollamaApi": {
+          "id": "Pe0R09Haq28T6YPI",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "embeddingBatchSize": 400,
+        "options": {
+          "queryName": "match_documents"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -2016,
+        2432
+      ],
+      "id": "e87486b5-6dac-4943-b1c2-59a50f977d15",
+      "name": "Supabase Vector Store Insert",
+      "credentials": {
+        "supabaseApi": {
+          "id": "uKfh51tl4oyGcHuC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool to fetch all available documents in the database. ",
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "document_metadata",
+          "mode": "list",
+          "cachedResultName": "document_metadata"
+        },
+        "returnAll": "",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.5,
+      "position": [
+        -1024,
+        2112
+      ],
+      "id": "52d7e246-2bb8-418c-bb57-aa7263137c5e",
+      "name": "List Documents",
+      "credentials": {
+        "postgres": {
+          "id": "lWfoQwGtpIzJoKBa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "document_metadata",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "title",
+              "fieldValue": "={{ $json[\"Upload your file(s)\"][0].filename }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -2208,
+        2304
+      ],
+      "id": "55a9072d-e74c-4515-8700-37d66caf907f",
+      "name": "Create doc metadata",
+      "credentials": {
+        "supabaseApi": {
+          "id": "uKfh51tl4oyGcHuC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Use RAG to look up information in the knowledgebase.",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "topK": 6,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -896,
+        2112
+      ],
+      "id": "ea728421-a97d-4bc5-bc9c-c54f04c48d17",
+      "name": "Supabase Vector Store",
+      "credentials": {
+        "supabaseApi": {
+          "id": "uKfh51tl4oyGcHuC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        -928,
+        2288
+      ],
+      "id": "efb012ed-60b7-4862-8cd7-a7152274baf6",
+      "name": "Embeddings Ollama1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "Pe0R09Haq28T6YPI",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite-preview-06-17",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1280,
+        2112
+      ],
+      "id": "340d0739-4dd4-4b5d-a39f-9a2abedb8917",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VLhNUIMhzGUwsuyU",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=You are an AI assistant that helps users interact with a vector-based document database. You have access to two tools:\n\n1. ListMetadata: Use this tool to retrieve metadata about documents in the vector database. This includes information like document IDs, titles, sources, tags, or creation dates.\n\n2. RAGQuery: Use this tool when the user asks a question that requires information from the content of documents. This tool performs a semantic search using vector embeddings and generates an answer based on the retrieved documents.\n\nWhen using RAGQuery, users often express their needs as natural language questions or informal queries. Before calling the tool, you should interpret and rephrase the user's request into a concise, document-oriented query. This helps the system retrieve the most relevant documents.\n\nFor example:\n\n- User: \"Hay un fuego en el almacén, ¿qué tengo que hacer?\"\n  → Rephrased Query: \"Procedimiento de actuación ante un fuego en el almacén\"\n\n- User: \"Me pueden sancionar si no llevo el casco?\"\n  → Rephrased Query: \"Normativa sobre uso obligatorio de casco y sanciones\"\n\nUse ListMetadata when the user:\n\n- Wants to browse or explore what documents are available.\n\n- Asks for summaries, sources, document counts, titles, dates, or tags.\n\n- Asks about metadata fields like document count, titles, dates, tags, etc.\n\nUse RAGQuery when the user:\n\n- Asks a specific question that likely requires reading or understanding the contents of the documents.\n\n- Needs procedures, policies, rules, or other internal information.\n\n- Wants a detailed or context-based answer derived from the stored documents.\n\nBe transparent with the user about where the information comes from (metadata vs. content), and choose the appropriate tool based on their intent. If you're unsure, first clarify the user’s goal before proceeding.\n\nAnswer in the same language you are spoken to."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -1264,
+        2512
+      ],
+      "id": "4a6db362-8727-42aa-92c4-84dbc328e5cc",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        -1248,
+        2720
+      ],
+      "id": "89d41315-6678-40df-8f31-9e3b35f9ede2",
+      "name": "Postgres Chat Memory1",
+      "credentials": {
+        "postgres": {
+          "id": "lWfoQwGtpIzJoKBa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool to fetch all available documents in the database. ",
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "document_metadata",
+          "mode": "list",
+          "cachedResultName": "document_metadata"
+        },
+        "returnAll": "",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.5,
+      "position": [
+        -1136,
+        2720
+      ],
+      "id": "496e00bc-ca5a-45f7-92ab-a2706a40098f",
+      "name": "List Documents1",
+      "credentials": {
+        "postgres": {
+          "id": "lWfoQwGtpIzJoKBa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        -1024,
+        2896
+      ],
+      "id": "a9b5c5de-f302-48a2-ad39-204e7a471d2c",
+      "name": "Embeddings Ollama2",
+      "credentials": {
+        "ollamaApi": {
+          "id": "Pe0R09Haq28T6YPI",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite-preview-06-17",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1376,
+        2720
+      ],
+      "id": "31352d38-8f87-4f07-94e9-0b64c3490eb2",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VLhNUIMhzGUwsuyU",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Insert Documents",
+        "height": 624,
+        "width": 912
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2560,
+        2256
+      ],
+      "typeVersion": 1,
+      "id": "79cc37b7-74c3-437f-a546-263e55044d0a",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Chat with one model",
+        "height": 592,
+        "width": 848,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1424,
+        1824
+      ],
+      "typeVersion": 1,
+      "id": "7b39622f-e231-4a02-a1f9-c6f7a7d0295b",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Chat with answer query node\nEsta funcionalidad hace la query primero y luego la IA interpreta los reseultados",
+        "height": 592,
+        "width": 848,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1424,
+        2432
+      ],
+      "typeVersion": 1,
+      "id": "ee4a7882-bd2e-418c-bf58-0919cef475e9",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "description": "=You are an AI assistant that helps AI Agents interact with a vector-based document database. \n\nYou have access to said vector store. Your two main fucntions are to:\n\n1. Recieve agent queries and traslate them to document-oriented text.\n\n<examples>\n\n<example>\nUser: \"Hay un fuego en el almacén, ¿qué tengo que hacer?\"\nRephrased Query: \"Procedimiento de actuación ante un fuego en el almacén\"\n</example>\n\n<example>\nUser: \"Me pueden sancionar si no llevo el casco?\"\nRephrased Query: \"Normativa sobre uso obligatorio de casco y sanciones\"\n</example>\n\n</examples>\n\n2. process the response, ordering the results according to their relevance to the original query. ",
+        "topK": 6
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolVectorStore",
+      "typeVersion": 1.1,
+      "position": [
+        -928,
+        2624
+      ],
+      "id": "aaf9bf44-e9dc-419f-a133-089543409ce2",
+      "name": "Answer questions with a vector store"
+    },
+    {
+      "parameters": {
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -960,
+        2752
+      ],
+      "id": "8a48b47b-d0ea-46ed-a0e0-9c8f50f8d904",
+      "name": "Supabase Vector Store2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "uKfh51tl4oyGcHuC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -672,
+        2800
+      ],
+      "id": "130bf67c-e017-4287-9b63-084adf46f14e",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VLhNUIMhzGUwsuyU",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=You are an assistant that helps users interact with a vector-based document database. \n\nYou have access to two tools:\n1. ListMetadata: Use this tool to retrieve metadata about documents in the vector database. This includes information like document IDs, titles, sources, tags, or creation dates.\n\n2. RAGQuery: Use this tool when the user asks a question that requires information from the content of documents. This tool performs a semantic search using vector embeddings and generates a natural-language answer based on the retrieved data.\n\n<use_cases>\n  <ListMetadata> \n    <use_case>The user wants to browse or explore what documents are available.</use_case>\n    <use_case>The user asks for summaries, sources, document counts, titles, dates, or tags.</use_case>\n  </ListMetadata>\n\n  <RAGQuery> \n    <use_case>The user asks a specific question that likely requires reading or understanding the contents of the documents.</use_case>\n    <use_case>The user needs procedures, policies, rules, or other internal information.</use_case>\n    <use_case>The user wants a detailed or context-based answer derived from the stored documents.</use_case>\n  </RAGQuery>\n</use_cases>\n\nBe transparent with the user about where the information comes from (metadata vs. content), and choose the appropriate tool based on their intent. If you're unsure, first clarify the user’s goal before proceeding.\n\nAnswer in the same language you are spoken to."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -320,
+        1904
+      ],
+      "id": "20382299-970b-406e-8fb5-941ad306329f",
+      "name": "AI Agent2"
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        -336,
+        2112
+      ],
+      "id": "5e0b219c-d17c-49cd-9eb9-c2ab0aaedd73",
+      "name": "Postgres Chat Memory2",
+      "credentials": {
+        "postgres": {
+          "id": "lWfoQwGtpIzJoKBa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        64,
+        2368
+      ],
+      "id": "9556f5cf-bf23-4896-869a-b213e3195854",
+      "name": "Embeddings Ollama3",
+      "credentials": {
+        "ollamaApi": {
+          "id": "Pe0R09Haq28T6YPI",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        2112
+      ],
+      "id": "82994359-5dd3-40bb-96e7-d422f23fb84a",
+      "name": "Google Gemini Chat Model3",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "64FrWQwI7nxTex2J",
+          "name": "Google Gemini(PaLM) Api account personal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Using an Agent as a tool\n",
+        "height": 672,
+        "width": 976
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -528,
+        1824
+      ],
+      "typeVersion": 1,
+      "id": "ffdcf15b-285c-4cd2-9243-db16e29da362",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Use this tool to make RAG queries to look up information in the knowledgebase.",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "topK": 6,
+        "includeDocumentMetadata": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        144,
+        2240
+      ],
+      "id": "6f7f0a4e-d94e-44b7-a6c1-afd1832136e2",
+      "name": "Supabase Vector Store1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "uKfh51tl4oyGcHuC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite-preview-06-17",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -64,
+        2240
+      ],
+      "id": "f1056f4d-13dd-4fab-bc5d-99d7da47a37c",
+      "name": "Google Gemini Chat Model4",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VLhNUIMhzGUwsuyU",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "allowFileUploads": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -480,
+        1904
+      ],
+      "id": "a0cd9fe8-cc14-4525-8049-be04e86cd286",
+      "name": "When chat message received",
+      "webhookId": "aaf46a4e-1cc3-4630-8116-87d2759a9411"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool to fetch all available documents in the database. ",
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "document_metadata",
+          "mode": "list",
+          "cachedResultName": "document_metadata"
+        },
+        "returnAll": "",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.5,
+      "position": [
+        -192,
+        2112
+      ],
+      "id": "1c4b33ec-b820-4878-b439-55451cb3573e",
+      "name": "ListMetadata",
+      "credentials": {
+        "postgres": {
+          "id": "lWfoQwGtpIzJoKBa",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "A tool to call an specialized agent, that can realize queries to the database to look up for information.  ",
+        "text": "=The AI Agent query is the following: {{ $fromAI('query') }}",
+        "options": {
+          "systemMessage": "=You are an AI assistant that helps AI Agents interact with a vector-based document database. \n\nYou have a tool to access said vector store. Your main fucntions are to:\n\n1. Recieve agent queries and traslate them to document-oriented text.\n\n<examples>\n\n<example>\nUser: \"Hay un fuego en el almacén, ¿qué tengo que hacer?\"\nRephrased Query: \"Procedimiento actuación fuego almacén\"\n</example>\n\n<example>\nUser: \"Me pueden sancionar si no llevo el casco?\"\nRephrased Query: \"Normativa casco y sanciones\"\n</example>\n\n</examples>\n\nMake short and concise queries, focusing just in important key words. \n\n2. Call the tool to make the RAG query.\n\n3. Finally, process the response, giving a natural language answer based on the retrieved information. "
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 2.2,
+      "position": [
+        -32,
+        2080
+      ],
+      "id": "8f51a5f9-7893-4add-867a-4905618225b7",
+      "name": "RAGQuery"
+    }
+  ],
+  "connections": {
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload your file here": {
+      "main": [
+        [
+          {
+            "node": "Supabase Vector Store Insert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create doc metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Supabase Vector Store Insert",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store Insert",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Documents": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create doc metadata": {
+      "main": [
+        []
+      ]
+    },
+    "Supabase Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Documents1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store2",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store2": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Answer questions with a vector store",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Answer questions with a vector store",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Answer questions with a vector store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory2": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama3": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store1": {
+      "ai_tool": [
+        [
+          {
+            "node": "RAGQuery",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "RAGQuery",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ListMetadata": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAGQuery": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "938865f3-9154-4061-bf11-a112a3e2a324",
+  "triggerCount": 0,
+  "tags": []
+}

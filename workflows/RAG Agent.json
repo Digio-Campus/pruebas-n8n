@@ -1,0 +1,339 @@
+{
+  "createdAt": "2025-07-28T09:34:04.248Z",
+  "updatedAt": "2025-07-31T08:15:42.000Z",
+  "id": "F1Tgb6URwFAoHWec",
+  "name": "RAG Agent",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this tool to fetch all available documents in the database. ",
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list",
+          "cachedResultName": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "document_metadata",
+          "mode": "list",
+          "cachedResultName": "document_metadata"
+        },
+        "returnAll": "",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.5,
+      "position": [
+        -464,
+        208
+      ],
+      "id": "3639721e-178a-43ec-a5c9-27f8631473e4",
+      "name": "ListMetadata",
+      "credentials": {
+        "postgres": {
+          "id": "jKKXFtf9HFES3IXY",
+          "name": "Postgres ragProject"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "A tool to call an specialized agent, that can realize queries to the database to look up for information.  ",
+        "text": "=The AI Agent query is the following: {{ $fromAI('query') }}",
+        "options": {
+          "systemMessage": "=You are an AI assistant that helps AI Agents interact with a vector-based document database. \n\nYou have a tool to access said vector store. Your main fucntions are to:\n\n1. Recieve agent queries and traslate them to document-oriented text.\n\n<examples>\n\n<example>\nUser: \"Hay un fuego en el almacén, ¿qué tengo que hacer?\"\nRephrased Query: \"Procedimiento actuación fuego almacén\"\n</example>\n\n<example>\nUser: \"Me pueden sancionar si no llevo el casco?\"\nRephrased Query: \"Normativa casco y sanciones\"\n</example>\n\n</examples>\n\nMake short and concise queries, focusing just in important key words. \n\n2. Call the tool to make the RAG query.\n\n3. Finally, process the response, giving a natural language answer based on the retrieved information. "
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 2.2,
+      "position": [
+        -128,
+        128
+      ],
+      "id": "4e284f64-c4f2-4a32-b8b3-3116942a080a",
+      "name": "RAGQuery"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=You are an assistant that helps users interact with a vector-based document database. \n\nYou have access to 3 tools:\n1. ListMetadata: Use this tool to retrieve metadata about documents in the vector database. This includes information like document IDs, titles, sources, tags, or creation dates.\n\n2. RAGQuery: Use this tool when the user asks a question that requires information from the content of documents. This tool performs a semantic search using vector embeddings and generates a natural-language answer based on the retrieved data.\n\n3. QueryRows: Use this tool if a SQL query for tabular data is required. When in need to use this tool, use the ListMetadata tool first to obtain the file_id and schema.\n\n<use_cases>\n  <ListMetadata> \n    <use_case>The user wants to browse or explore what documents are available.</use_case>\n    <use_case>The user asks for summaries, sources, document counts, titles, dates, or tags.</use_case>\n  </ListMetadata>\n\n  <RAGQuery> \n    <use_case>The user asks a specific question that likely requires reading or understanding the contents of the documents.</use_case>\n    <use_case>The user needs procedures, policies, rules, or other internal information.</use_case>\n    <use_case>The user wants a detailed or context-based answer derived from the stored documents.</use_case>\n  </RAGQuery>\n\n<QueryRows>\n    <use_case> The user wants the average, max/min, etc of a column. </use_case>\n    <use_case> The user wants to access data from multiple rows. </use_case>\n</QueryRows>\n</use_cases>\n\nBe transparent with the user about where the information comes from (metadata vs. content), and choose the appropriate tool based on their intent. If you're unsure, first clarify the user’s goal before proceeding.\n\nAnswer in the same language you are spoken to."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -592,
+        -16
+      ],
+      "id": "23c28ad5-8ff5-4a27-aed0-a0ff9f3addc6",
+      "name": "OrquestadorBBDD"
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        -608,
+        208
+      ],
+      "id": "a9dbffb1-3b6e-4426-9fea-03823b6ee358",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "jKKXFtf9HFES3IXY",
+          "name": "Postgres ragProject"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite-preview-06-17",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        288
+      ],
+      "id": "a7aba41d-6957-4971-abc0-d7ebc4bb36df",
+      "name": "Flash-lite",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VLhNUIMhzGUwsuyU",
+          "name": "Gemini Api Digio"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -736,
+        208
+      ],
+      "id": "ababbb36-ac2f-487a-8aee-e78adb2190c6",
+      "name": "Flash",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "64FrWQwI7nxTex2J",
+          "name": "Gemini Api personal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Use this tool to make RAG queries to look up information in the knowledgebase.",
+        "tableName": {
+          "__rl": true,
+          "value": "documents_pg",
+          "mode": "list",
+          "cachedResultName": "documents_pg"
+        },
+        "topK": 6,
+        "includeDocumentMetadata": false,
+        "options": {
+          "queryName": "match_documents"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        128,
+        288
+      ],
+      "id": "81965f8f-f303-4e63-8d67-776a3b111783",
+      "name": "Supabase Vector Store",
+      "credentials": {
+        "supabaseApi": {
+          "id": "SUpho4m6LuEL2dEN",
+          "name": "supabase ragProject"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        112,
+        448
+      ],
+      "id": "340d0b87-1776-4be5-adc6-a1fd6d9e57e7",
+      "name": "Embeddings Ollama",
+      "credentials": {
+        "ollamaApi": {
+          "id": "Pe0R09Haq28T6YPI",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -832,
+        -16
+      ],
+      "id": "19f16eac-02fe-470b-a651-998b41630a04",
+      "name": "When chat message received",
+      "webhookId": "a19e13ec-a36e-43c0-b56e-04d3ae81d163"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "=Run a SQL query - use this to query from the document_rows table once you know the file ID (which is the file path) you are querying. \ndataset_id is the file_id (file path) and you are always using the row_data for filtering, which is a jsonb field that has all the keys from the file schema given in the document_metadata table.\n\n<example_queries>\n<query>\nSELECT AVG((row_data->>'revenue')::numeric)\nFROM document_rows\nWHERE dataset_id = '/data/shared/document.csv';\n\nExample query 2:\n\nSELECT \n    row_data->>'category' as category,\n    SUM((row_data->>'sales')::numeric) as total_sales\nFROM dataset_rows\nWHERE dataset_id = '/data/shared/document2.csv'\nGROUP BY row_data->>'category';\n</query>\n\n<query>\nSELECT \n    row_data->>'﻿product.partNumber' as product_partNumber, \n    (row_data->>'value')::numeric as value \nFROM document_rows \nWHERE dataset_id = 'C:\\Users\\javil\\Downloads\\Ejemplos\\Inventory-V2.csv' \nORDER BY value ASC LIMIT 1\n</query>\n</example_queries>",
+        "operation": "executeQuery",
+        "query": "{{ $fromAI('sql_query') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.5,
+      "position": [
+        -320,
+        208
+      ],
+      "id": "ecbd0493-631f-4009-878b-28c810a7b7ef",
+      "name": "QueryRows",
+      "credentials": {
+        "postgres": {
+          "id": "jKKXFtf9HFES3IXY",
+          "name": "Postgres ragProject"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "ListMetadata": {
+      "ai_tool": [
+        [
+          {
+            "node": "OrquestadorBBDD",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAGQuery": {
+      "ai_tool": [
+        [
+          {
+            "node": "OrquestadorBBDD",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "OrquestadorBBDD",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flash-lite": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "RAGQuery",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flash": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "OrquestadorBBDD",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "RAGQuery",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "OrquestadorBBDD",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "QueryRows": {
+      "ai_tool": [
+        [
+          {
+            "node": "OrquestadorBBDD",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OrquestadorBBDD": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "6c68b00c-e546-4580-817d-f6f382fbb113",
+  "triggerCount": 0,
+  "tags": []
+}

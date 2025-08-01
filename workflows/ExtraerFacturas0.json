@@ -1,0 +1,1392 @@
+{
+  "createdAt": "2025-07-29T10:14:57.960Z",
+  "updatedAt": "2025-07-29T10:17:03.000Z",
+  "id": "JvblHzroxPmsNEKg",
+  "name": "ExtraerFacturas0",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {
+          "dataPropertyAttachmentsPrefixName": "attachment_",
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -2672,
+        336
+      ],
+      "id": "74e16db8-97bc-47ac-937b-76e344c5373e",
+      "name": "Get a message",
+      "webhookId": "64329f13-010c-4f61-aaea-4edd853c6ebf"
+    },
+    {
+      "parameters": {
+        "jsCode": "// https://community.n8n.io/t/iterating-over-email-attachments/13588/3\nlet results = [];\n\nfor (const item of $input.all()) {\n  console.log(item);\n  for (const key of Object.keys(item.binary)) {\n    results.push({\n        json: {fileName : item.binary[key].fileName },\n        binary: {\n            data: item.binary[key],\n        }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "id": "3457dbe6-f177-4455-99c9-c45cee4282b3",
+      "name": "Iterate over email attachments",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -2448,
+        336
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {},
+      "id": "a92009a2-1cb9-4749-be10-8c858778da43",
+      "name": "Not a PDF",
+      "type": "n8n-nodes-base.noOp",
+      "position": [
+        -1776,
+        432
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {},
+      "id": "4688da6a-a419-4dcc-80eb-a23495ea2731",
+      "name": "Read PDF email attachments",
+      "type": "n8n-nodes-base.readPDF",
+      "position": [
+        -1776,
+        240
+      ],
+      "notesInFlow": false,
+      "typeVersion": 1,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $binary.data.fileExtension }}",
+              "value2": "pdf"
+            }
+          ]
+        }
+      },
+      "id": "b911c7a8-f585-4d8e-8c26-fd6919acacc2",
+      "name": "Is attachment a PDF?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        -2000,
+        336
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "44c7b8fb-54b7-4208-a0ea-af174d2afd5c",
+              "leftValue": "={{$json.fileName}}",
+              "rightValue": "factura",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -2224,
+        336
+      ],
+      "id": "2a54ff61-f9c0-4f80-8a63-fda0dfa4cfac",
+      "name": "Filtrar por nombre"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=A continuación te paso una factura en texto plano sacada de un pdf, sin formato. Devuélveme un JSON estructurado con los campos detectados, incluyendo conceptos, totales, datos del cliente y emisor si están presentes:\n\nEste es el nombre del pdf:\n```\n{{ $binary.data.fileName }}\n```\n\nEste es el contenido del pdf:\n```\n{{ $json.text }}\n```",
+        "options": {
+          "systemMessage": "=Actúa como un asistente experto en extracción de datos estructurados a partir de facturas en texto plano. Tu tarea es convertir textos sin formato en un objeto JSON con la estructura exacta que se indica a continuación, manteniendo los nombres de los campos tal como están escritos:\n\n```json\n{\n  \"numero_factura\": \"\",\n  \"fecha\" : \"\",\n  \"empresa\": {\n    \"nombre\": \"\",\n    \"direccion\": \"\",\n    \"mail\": \"\",\n    \"telefono\": \"\",\n    \"cif\": \"\",\n    \"fax\": \"\",\n    \"web\": \"\"\n  },\n  \"cliente\": {\n    \"nombre\": \"\",\n    \"direccion\": \"\",\n    \"mail\": \"\",\n    \"telefono\": \"\"\n  },\n  \"conceptos\": [\n    {\n      \"descripcion\": \"\",\n      \"cantidad\": \"\",\n      \"precio\": \"\",\n      \"total_linea\": \"\"\n    }\n  ],\n  \"totales\": {\n    \"subtotal\": \"\",\n    \"impuestos\": [\n      {\n        \"porcentaje\": \"\",\n        \"cantidad\": \"\"\n      }\n    ],\n    \"total\": \"\"\n  },\n  \"forma_pago\": \"\",\n  \"notas_factura\": \"\",\n  \"observaciones_IA\": []\n}\n```\n\nReglas importantes:\nSi no hay información disponible para algún campo, debes dejarlo como una cadena vacía (\"\"), nunca omitirlo.\n\nExtrae todos los conceptos si están disponibles, y colócalos en la lista conceptos.\n\nSi detectas impuestos (como IVA o IRPF), inclúyelos en la lista totales.impuestos con su porcentaje y cantidad.\n\nTodos los formatos númericos deben ir sin su unidad, por ejemplo 100€ a 100 o 7% a 7.\n\nLa fecha, si esta, conviertela a formato dateTime. \n\nEn observaciones_IA, escribe cualquier duda, incoherencia, posible error o ambigüedad detectada (por ejemplo: totales que no cuadran, fechas dudosas, campos duplicados, etc.).\n\nNo inventes valores. Extrae sólo lo que esté presente de forma explícita.\n\nEl JSON debe estar bien indentado y ser válido."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -1536,
+        224
+      ],
+      "id": "f27619ca-61ef-434b-9b6b-6c0cdb375efe",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1472,
+        400
+      ],
+      "id": "03d85c30-cfed-46da-96ab-2cccceaa8eba",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyHour",
+              "minute": 30
+            }
+          ]
+        },
+        "filters": {
+          "q": "has:attachment"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2896,
+        336
+      ],
+      "id": "b9e32053-6446-4af2-aa28-d6377ba8eeda",
+      "name": "Gmail Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  const jsonMatch =  item.json.output.match(/```json\\n([\\s\\S]*?)\\n```/);\n  let jsonString = jsonMatch ? jsonMatch[1] : item.json.output;\n  // Limpia cualquier carácter extra\n  jsonString = jsonString.trim();\n\n  item.json = JSON.parse(jsonString);\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1120,
+        224
+      ],
+      "id": "124828f7-7b68-43ee-8e54-c252c9e75e8d",
+      "name": "Sacar el JSON de la respuesta"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "2d6d6187-27a0-4430-999f-5e863bdb48a5",
+              "leftValue": "={{ $json.observaciones_IA.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -896,
+        224
+      ],
+      "id": "579e2e5d-5003-47d2-9efa-cdc7f0216502",
+      "name": "Has any errors?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": []
+        },
+        "includeOtherFields": true,
+        "include": "except",
+        "excludeFields": "observaciones_IA",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -672,
+        304
+      ],
+      "id": "8ddd8a1a-b583-4044-9dbe-1a1ffc4bab9b",
+      "name": "Eliminar observaciones IA"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        208
+      ],
+      "id": "b1064d34-9c9c-4093-8b15-a4197d26e9c1",
+      "name": "Junta todos los datos"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        -1504,
+        624
+      ],
+      "id": "b21a6503-0210-4947-947c-c6a0f0f68ccc",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "=\n{\n  \"subtotal\": \"{{ $json.totales.subtotal }}\",\n  \"total\": \"{{ $json.totales.total }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -112,
+        144
+      ],
+      "id": "986f8527-f81b-424d-af82-430659c4fcec",
+      "name": "Obtener datos para Total"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "Total",
+          "mode": "list",
+          "cachedResultName": "Total"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "subtotal": 0,
+            "total": 0
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "subtotal",
+              "displayName": "subtotal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total",
+              "displayName": "total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        80,
+        144
+      ],
+      "id": "48fe7800-ec78-49c6-96e4-3bcda2e1c02e",
+      "name": "Insertar Total"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ $json.empresa }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -112,
+        288
+      ],
+      "id": "04a4a77a-8f58-4fa1-927e-c166a5115968",
+      "name": "Obtener datos para Empresa"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "Empresa",
+          "mode": "list",
+          "cachedResultName": "Empresa"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cif",
+              "displayName": "cif",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "direccion",
+              "displayName": "direccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mail",
+              "displayName": "mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "fax",
+              "displayName": "fax",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "web",
+              "displayName": "web",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        80,
+        288
+      ],
+      "id": "7544e8b6-0662-48fb-a0c5-cc4e4a7174e8",
+      "name": "Insertar Empresa"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "Cliente",
+          "mode": "list",
+          "cachedResultName": "Cliente"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "nombre",
+              "displayName": "nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "direccion",
+              "displayName": "direccion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "mail",
+              "displayName": "mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "telefono",
+              "displayName": "telefono",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        80,
+        432
+      ],
+      "id": "65208694-b863-47b3-9b22-c1444c0cd982",
+      "name": "Insertar Cliente"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "Factura",
+          "mode": "list",
+          "cachedResultName": "Factura"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "cliente": "={{ $('Insertar Cliente').item.json.id }}",
+            "totales": "={{ $('Insertar Total').item.json.id }}",
+            "fecha": "={{ $('Pass factura y conceptos').item.json.fecha}}",
+            "forma_pago": "={{ $('Pass factura y conceptos').item.json.forma_pago }}",
+            "notas_factura": "={{ $('Pass factura y conceptos').item.json.notas_factura }}",
+            "empresa": "={{ $('Insertar Empresa').item.json.id }}",
+            "numero_factura": "={{ $('Pass factura y conceptos').item.json.numero_factura }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "fecha",
+              "displayName": "fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "empresa",
+              "displayName": "empresa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "cliente",
+              "displayName": "cliente",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "numero_factura",
+              "displayName": "numero_factura",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "totales",
+              "displayName": "totales",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "forma_pago",
+              "displayName": "forma_pago",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "notas_factura",
+              "displayName": "notas_factura",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        512,
+        368
+      ],
+      "id": "db37df52-9f3e-4256-9766-be32c0e19de1",
+      "name": "Insert rows in Factura"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ $json.cliente }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -112,
+        448
+      ],
+      "id": "f6df39ab-d693-4b59-8911-91b951122459",
+      "name": "Obtener datos para Cliente"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 4,
+        "options": {
+          "clashHandling": {
+            "values": {
+              "resolveClash": "addSuffix"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        336,
+        336
+      ],
+      "id": "f597e1dc-946b-4e6c-b667-86e0b8626048",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "totales.impuestos",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "4c830b0c-8839-4e24-b144-d33c48b6d60a",
+      "name": "Separar Impuestos"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "Impuesto",
+          "mode": "list",
+          "cachedResultName": "Impuesto"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "porcentaje": "={{ $json.porcentaje }}",
+            "cantidad": "={{ $json.cantidad }}",
+            "total_id": "={{ $json.id }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "porcentaje",
+              "displayName": "porcentaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cantidad",
+              "displayName": "cantidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total_id",
+              "displayName": "total_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        640,
+        64
+      ],
+      "id": "a336b224-f8a3-47b7-8386-25dc86c65d22",
+      "name": "Insert rows in Impuesto"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "336424d9-21ff-4c5f-a1c8-31285068b6da",
+      "name": "Pass impuestos"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        16,
+        624
+      ],
+      "id": "8638984a-5f93-4ae1-a09e-57561476088c",
+      "name": "Pass factura y conceptos"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "conceptos",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        256,
+        624
+      ],
+      "id": "3d8d055d-a594-4c35-a970-99b5a1519398",
+      "name": "Separar conceptos"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        432,
+        64
+      ],
+      "id": "9ce3d2db-8e14-41d3-a0fc-4e2d4364351c",
+      "name": "Merge impuesto y total_id"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        624,
+        608
+      ],
+      "id": "e7c8fcad-bce6-4289-8d62-de389bc51c19",
+      "name": "Merge concepto y factura_id"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "Concepto",
+          "mode": "list",
+          "cachedResultName": "Concepto"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "cantidad": "={{ $json.cantidad }}",
+            "precio": "={{ $json.precio }}",
+            "total_linea": "={{ $json.total_linea }}",
+            "factura_id": "={{ $json.id }}",
+            "descripcion": "={{ $json.descripcion }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "descripcion",
+              "displayName": "descripcion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "cantidad",
+              "displayName": "cantidad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "precio",
+              "displayName": "precio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "total_linea",
+              "displayName": "total_linea",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "factura_id",
+              "displayName": "factura_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        832,
+        608
+      ],
+      "id": "2057e637-a701-4476-a686-990fb5b73c64",
+      "name": "Insert rows in Concepto"
+    }
+  ],
+  "connections": {
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Iterate over email attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Iterate over email attachments": {
+      "main": [
+        [
+          {
+            "node": "Filtrar por nombre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is attachment a PDF?": {
+      "main": [
+        [
+          {
+            "node": "Read PDF email attachments",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not a PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar por nombre": {
+      "main": [
+        [
+          {
+            "node": "Is attachment a PDF?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read PDF email attachments": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Sacar el JSON de la respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sacar el JSON de la respuesta": {
+      "main": [
+        [
+          {
+            "node": "Has any errors?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has any errors?": {
+      "main": [
+        [
+          {
+            "node": "Junta todos los datos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Eliminar observaciones IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eliminar observaciones IA": {
+      "main": [
+        [
+          {
+            "node": "Junta todos los datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Junta todos los datos": {
+      "main": [
+        [
+          {
+            "node": "Pass impuestos",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Obtener datos para Total",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Obtener datos para Empresa",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Obtener datos para Cliente",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Pass factura y conceptos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Not a PDF": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener datos para Total": {
+      "main": [
+        [
+          {
+            "node": "Insertar Total",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insertar Total": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge impuesto y total_id",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Obtener datos para Empresa": {
+      "main": [
+        [
+          {
+            "node": "Insertar Empresa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insertar Empresa": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Insertar Cliente": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Insert rows in Factura": {
+      "main": [
+        [
+          {
+            "node": "Merge concepto y factura_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener datos para Cliente": {
+      "main": [
+        [
+          {
+            "node": "Insertar Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in Factura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar Impuestos": {
+      "main": [
+        [
+          {
+            "node": "Merge impuesto y total_id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pass impuestos": {
+      "main": [
+        [
+          {
+            "node": "Separar Impuestos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pass factura y conceptos": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          },
+          {
+            "node": "Separar conceptos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Separar conceptos": {
+      "main": [
+        [
+          {
+            "node": "Merge concepto y factura_id",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge impuesto y total_id": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in Impuesto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge concepto y factura_id": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in Concepto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {
+    "AI Agent": [
+      {
+        "json": {
+          "output": "```json\n{\n  \"numero_factura\": \"98765\",\n  \"fecha\": \"2012-11-24T00:00:00Z\",\n  \"empresa\": {\n    \"nombre\": \"DISTRIBUCIONES FICTICIAS DE PRUEBA PROBERO PROBANDO HERNANDEZ\",\n    \"direccion\": \"Calle y número de mi empresa, MI LOCALIDAD, 99999 MI PROVINCIA\",\n    \"mail\": \"mi_email@mailserver.com\",\n    \"telefono\": \"999-99.99.99\",\n    \"cif\": \"X0000000T\",\n    \"fax\": \"999-88.88.88\",\n    \"web\": \"www.mipaginaweb.com\"\n  },\n  \"cliente\": {\n    \"nombre\": \"PRUEBASED GARCIA PROBERO\",\n    \"direccion\": \"CL GRAN VIA 5 -Dirección Fiscal, PALMA DE MALLORCA, 07610 BALEARES\",\n    \"mail\": \"\",\n    \"telefono\": \"\"\n  },\n  \"conceptos\": [\n    {\n      \"descripcion\": \"ARTICULO ESPECÍFICO CON EL NOMBRE QUE SEA\",\n      \"cantidad\": \"1.5\",\n      \"precio\": \"600.00\",\n      \"total_linea\": \"900.00\"\n    },\n    {\n      \"descripcion\": \"OTRO ARTICULO, AQUÍ PONDRÁ SU DESCRIPCION\",\n      \"cantidad\": \"12.0\",\n      \"precio\": \"10.50\",\n      \"total_linea\": \"126.00\"\n    }\n  ],\n  \"totales\": {\n    \"subtotal\": \"1026.00\",\n    \"impuestos\": [\n      {\n        \"porcentaje\": \"21\",\n        \"cantidad\": \"215.46\"\n      }\n    ],\n    \"total\": \"1241.46\"\n  },\n  \"forma_pago\": \"CONTADO\",\n  \"notas_factura\": \"Plazo devolución: 30 días\\nPonga aquí su inscripción en el Registro, u otros datos de interés para el cliente, horarios, incluso datos publicitarios como ofertas, etc.\",\n  \"observaciones_IA\": []\n}\n```"
+        }
+      },
+      {
+        "json": {
+          "output": "```json\n{\n  \"numero_factura\": \"\",\n  \"fecha\": \"2023-08-15T00:00:00Z\",\n  \"empresa\": {\n    \"nombre\": \"Borcelle\",\n    \"direccion\": \"Calle Cualquiera 123, Cualquier Lugar\",\n    \"mail\": \"Hola@unsitiogenial.es\",\n    \"telefono\": \"911-234-5678\",\n    \"cif\": \"\",\n    \"fax\": \"\",\n    \"web\": \"\"\n  },\n  \"cliente\": {\n    \"nombre\": \"Sandra Haro\",\n    \"direccion\": \"Calle Cualquiera 123, Cualquier Lugar\",\n    \"mail\": \"Hola@unsitiogenial.es\",\n    \"telefono\": \"911-234-5678\"\n  },\n  \"conceptos\": [\n    {\n      \"descripcion\": \"Diseño web\",\n      \"cantidad\": \"1\",\n      \"precio\": \"100\",\n      \"total_linea\": \"100\"\n    },\n    {\n      \"descripcion\": \"Publicidad\",\n      \"cantidad\": \"1\",\n      \"precio\": \"100\",\n      \"total_linea\": \"100\"\n    },\n    {\n      \"descripcion\": \"Marketing\",\n      \"cantidad\": \"1\",\n      \"precio\": \"100\",\n      \"total_linea\": \"100\"\n    },\n    {\n      \"descripcion\": \"Asistencia web\",\n      \"cantidad\": \"1\",\n      \"precio\": \"100\",\n      \"total_linea\": \"100\"\n    }\n  ],\n  \"totales\": {\n    \"subtotal\": \"500\",\n    \"impuestos\": [\n      {\n        \"porcentaje\": \"21\",\n        \"cantidad\": \"105\"\n      },\n      {\n        \"porcentaje\": \"7\",\n        \"cantidad\": \"35\"\n      }\n    ],\n    \"total\": \"500\"\n  },\n  \"forma_pago\": \"Transferencia\",\n  \"notas_factura\": \"El servicio tiene una validez de 30 días.\",\n  \"observaciones_IA\": [\n    \"Los datos de dirección, mail y teléfono para la empresa 'Borcelle' y el cliente 'Sandra Haro' son idénticos, lo cual es una inconsistencia o un posible error en el documento original.\",\n    \"La suma de los 'total_linea' de los conceptos (4 x 100 = 400) no coincide con el 'subtotal' declarado (500).\",\n    \"El 'total' (500) no cuadra con el 'subtotal' (500) más los impuestos (IVA 105) menos las retenciones (IRPF 35). 500 + 105 - 35 = 570. Si el subtotal fuera 400 (según los conceptos), el total sería 400 + 105 - 35 = 470. El total de 500 es inconsistente con los demás valores.\",\n    \"El nombre 'Rosa María Aguado' aparece al final del documento sin una etiqueta clara que indique su rol.\"\n  ]\n}\n```"
+        }
+      },
+      {
+        "json": {
+          "output": "```json\n{\n  \"numero_factura\": \"\",\n  \"fecha\": \"2030-08-15\",\n  \"empresa\": {\n    \"nombre\": \"BORCELLE\",\n    \"direccion\": \"Calle Cualquiera 123, Cualquier Lugar\",\n    \"mail\": \"Hola@unsitiogenial.es\",\n    \"telefono\": \"911-234-5678\",\n    \"cif\": \"\",\n    \"fax\": \"\",\n    \"web\": \"\"\n  },\n  \"cliente\": {\n    \"nombre\": \"Belén Castillo\",\n    \"direccion\": \"Calle Cualquiera 123, Cualquier Lugar\",\n    \"mail\": \"Hola@unsitiogenial.es\",\n    \"telefono\": \"911-234-5678\"\n  },\n  \"conceptos\": [\n    {\n      \"descripcion\": \"Diseño web\",\n      \"cantidad\": \"1\",\n      \"precio\": \"100\",\n      \"total_linea\": \"100\"\n    },\n    {\n      \"descripcion\": \"Publicidad\",\n      \"cantidad\": \"1\",\n      \"precio\": \"100\",\n      \"total_linea\": \"100\"\n    },\n    {\n      \"descripcion\": \"Marketing\",\n      \"cantidad\": \"1\",\n      \"precio\": \"100\",\n      \"total_linea\": \"100\"\n    },\n    {\n      \"descripcion\": \"Asistencia web\",\n      \"cantidad\": \"1\",\n      \"precio\": \"100\",\n      \"total_linea\": \"100\"\n    }\n  ],\n  \"totales\": {\n    \"subtotal\": \"500\",\n    \"impuestos\": [\n      {\n        \"porcentaje\": \"21\",\n        \"cantidad\": \"105\"\n      },\n      {\n        \"porcentaje\": \"7\",\n        \"cantidad\": \"35\"\n      }\n    ],\n    \"total\": \"500\"\n  },\n  \"forma_pago\": \"Transferencia\",\n  \"notas_factura\": \"El servicio tiene una validez de 30 días.\",\n  \"observaciones_IA\": [\n    \"El nombre 'Cristina Gallego' aparece al principio del documento sin una etiqueta clara que lo identifique, mientras que el nombre del cliente 'Belén Castillo' está explícitamente definido bajo 'DATOS DEL CLIENTE'. Se ha priorizado el dato explícito como nombre del cliente.\",\n    \"La suma de los totales de línea de los conceptos (4 x 100 = 400) no coincide con el Subtotal declarado (500).\",\n    \"El 'Total' declarado (500) no coincide con la suma del 'Subtotal' (500) más el 'IVA' (105) menos el 'IRPF' (35), que resultaría en 570. Parece haber una inconsistencia en los cálculos finales.\"\n  ]\n}\n```"
+        }
+      }
+    ]
+  },
+  "versionId": "4f167388-76e1-4721-b255-4c94a1d81543",
+  "triggerCount": 0,
+  "tags": []
+}

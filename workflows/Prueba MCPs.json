@@ -1,0 +1,537 @@
+{
+  "createdAt": "2025-07-23T09:53:56.357Z",
+  "updatedAt": "2025-07-31T08:21:29.000Z",
+  "id": "nsPysbLsBb9LyfRK",
+  "name": "Prueba MCPs",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -16,
+        -16
+      ],
+      "id": "d3c99b61-7d30-4811-b7ab-1afd91b19945",
+      "name": "When chat message received",
+      "webhookId": "e9a68b0a-b907-41db-b0c1-d312a97ce79b"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are an assistant whose function is orquestrated between sub assistant each one with an specific pourpose.\n\nYou currently have just one tool call 'Filesystem Agent', to which you must delegate every activity involving file management."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        304,
+        -16
+      ],
+      "id": "7f09bbd4-3809-458e-83c0-5b29ddd8c8d4",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        32,
+        208
+      ],
+      "id": "cd36d8bc-501a-44a8-ae97-ed5ade3091a5",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "lWfoQwGtpIzJoKBa",
+          "name": "Postgres javilujanProject"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "AI Agent that can call other tools to access the filesystem",
+        "text": "={{ $fromAI('query') }}",
+        "options": {
+          "systemMessage": "You are a helpful assistant that helps others Agent to access to the filesystem trough tools.\n\nAlways use the tool that list the available tools and then choose the best tool to perform the request."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 2.2,
+      "position": [
+        992,
+        272
+      ],
+      "id": "8f75b6cd-28de-44dd-97cf-fa1fdbad5084",
+      "name": "Filesystem Agent"
+    },
+    {
+      "parameters": {
+        "toolDescription": "AI Agent that can call other tools to retrieve time information",
+        "text": "={{ $fromAI('query') }}",
+        "options": {
+          "systemMessage": "You are a helpful assistant that helps others Agent obtain time information trough tools.\n\nAlways use the tool that list the available tools and then choose the best tool to perform the request."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 2.2,
+      "position": [
+        528,
+        272
+      ],
+      "id": "e0980ab8-ed07-4867-9447-d6ed0e96d09a",
+      "name": "Time Agent"
+    },
+    {
+      "parameters": {
+        "connectionType": "http"
+      },
+      "type": "n8n-nodes-mcp.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        640,
+        496
+      ],
+      "id": "7e2639b8-d7ae-4d92-8782-194be27ffea1",
+      "name": "list tools",
+      "credentials": {
+        "mcpClientHttpApi": {
+          "id": "kOMsNZFccBZR1pXF",
+          "name": "MCP Smithery Time"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        688,
+        -16
+      ],
+      "id": "8a3c7b2d-4f5e-6789-a1b2-c3d4e5f67890",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-mcp.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        288,
+        464
+      ],
+      "id": "d2a5f545-d401-4703-b6e9-d8c40145269f",
+      "name": "PruebaUV",
+      "credentials": {
+        "mcpClientApi": {
+          "id": "hGS6S1lmfkGusqhE",
+          "name": "MCP pdfToMd"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeTool",
+        "toolName": " pdf_to_markdown",
+        "toolParameters": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Tool_Parameters', ``, 'json') }}"
+      },
+      "type": "n8n-nodes-mcp.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        400,
+        464
+      ],
+      "id": "af452c45-a3c3-4614-b962-9b90dc580d2b",
+      "name": "pdfToMd",
+      "credentials": {
+        "mcpClientApi": {
+          "id": "hGS6S1lmfkGusqhE",
+          "name": "MCP pdfToMd"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "AI Agent that can call other tools to read pdf files parsing them to markdown if given the path",
+        "text": "={{ $fromAI('query') }}",
+        "options": {
+          "systemMessage": "You are a helpful assistant that helps others Agent read pdfs trough tools.\n\nAlways use the tool that list the available tools and then choose the best tool to perform the request."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 2.2,
+      "position": [
+        192,
+        256
+      ],
+      "id": "d1010564-8def-40ad-b3a2-a07148d3df39",
+      "name": "PdfToMd Agent"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-mcp.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        496
+      ],
+      "id": "b4794246-c67e-4694-9a22-766e7f9f1943",
+      "name": "list tools1",
+      "credentials": {
+        "mcpClientApi": {
+          "id": "xES8LSGlA4ee5JN8",
+          "name": "MCP Filesystem"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeTool",
+        "toolName": "={{ $fromAI(\"toolName\") }}",
+        "toolParameters": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Tool_Parameters', ``, 'json') }}"
+      },
+      "type": "n8n-nodes-mcp.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        496
+      ],
+      "id": "0b5269ff-cc25-42e8-8ddd-6274fbf9560a",
+      "name": "execute tool1",
+      "credentials": {
+        "mcpClientApi": {
+          "id": "xES8LSGlA4ee5JN8",
+          "name": "MCP Filesystem"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "connectionType": "http",
+        "operation": "executeTool",
+        "toolName": "=readableTime",
+        "toolParameters": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Tool_Parameters', ``, 'json') }}"
+      },
+      "type": "n8n-nodes-mcp.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        864,
+        496
+      ],
+      "id": "88e23637-d874-42cb-9659-2e2d0cfa3e16",
+      "name": "readableTime",
+      "credentials": {
+        "mcpClientHttpApi": {
+          "id": "kOMsNZFccBZR1pXF",
+          "name": "MCP Smithery Time"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "connectionType": "http",
+        "operation": "executeTool",
+        "toolName": "getTime"
+      },
+      "type": "n8n-nodes-mcp.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        752,
+        496
+      ],
+      "id": "c78ce3fa-2475-4baf-9921-0806bdcbf238",
+      "name": "getTime",
+      "credentials": {
+        "mcpClientHttpApi": {
+          "id": "kOMsNZFccBZR1pXF",
+          "name": "MCP Smithery Time"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -96,
+        208
+      ],
+      "id": "fe335db5-ae5d-4c85-a8cb-c8f38a68da1b",
+      "name": "Flash",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VLhNUIMhzGUwsuyU",
+          "name": "Gemini Api Digio"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite-preview-06-17",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        160,
+        464
+      ],
+      "id": "7174ed12-e99b-45ff-80e0-1d8a6fdf9e0d",
+      "name": "Flash Lite",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "64FrWQwI7nxTex2J",
+          "name": "Gemini Api personal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite-preview-06-17",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        528,
+        496
+      ],
+      "id": "1febfa3c-db3c-405d-94c9-622cb1612378",
+      "name": "Flash Lite1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "64FrWQwI7nxTex2J",
+          "name": "Gemini Api personal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite-preview-06-17",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        992,
+        496
+      ],
+      "id": "86c5db8f-483d-422e-86fa-1c32530feb5d",
+      "name": "Flash Lite2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "64FrWQwI7nxTex2J",
+          "name": "Gemini Api personal"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filesystem Agent": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Time Agent": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "list tools": {
+      "ai_tool": [
+        [
+          {
+            "node": "Time Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PruebaUV": {
+      "ai_tool": [
+        [
+          {
+            "node": "PdfToMd Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "pdfToMd": {
+      "ai_tool": [
+        [
+          {
+            "node": "PdfToMd Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PdfToMd Agent": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "list tools1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Filesystem Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "execute tool1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Filesystem Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "readableTime": {
+      "ai_tool": [
+        [
+          {
+            "node": "Time Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "getTime": {
+      "ai_tool": [
+        [
+          {
+            "node": "Time Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flash": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flash Lite": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "PdfToMd Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flash Lite1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Time Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flash Lite2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Filesystem Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "450266aa-f190-40ae-b4e4-16045d5a73bf",
+  "triggerCount": 0,
+  "tags": []
+}
