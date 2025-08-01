@@ -1,0 +1,151 @@
+{
+  "createdAt": "2025-08-01T11:14:04.409Z",
+  "updatedAt": "2025-08-01T11:16:39.000Z",
+  "id": "D5wK0DsB5Fx7TFCY",
+  "name": "Servidor1",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "path": "cf434411-7ba7-40a6-9abe-be6c3c878454"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "41e98b98-9ed8-4341-bd69-17ce2a3c9374",
+      "name": "MCP Server Trigger",
+      "webhookId": "cf434411-7ba7-40a6-9abe-be6c3c878454"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "document_metadata",
+          "mode": "list",
+          "cachedResultName": "document_metadata"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": true,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "schema",
+              "displayName": "schema",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        32,
+        176
+      ],
+      "id": "b088eaf1-a2e5-4f2a-a73e-6322744858ee",
+      "name": "Insert rows in a table in Postgres",
+      "credentials": {
+        "postgres": {
+          "id": "jKKXFtf9HFES3IXY",
+          "name": "Postgres ragProject"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://github.com/Digio-Campus/pruebas-n8n/tree/main",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        320,
+        176
+      ],
+      "id": "db60004a-c2a3-43ad-a7c4-d8380da94f9f",
+      "name": "HTTP Request"
+    }
+  ],
+  "connections": {
+    "Insert rows in a table in Postgres": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "446af928-ca04-433f-b2eb-2ab0ec58dcfd",
+  "triggerCount": 0,
+  "tags": []
+}
