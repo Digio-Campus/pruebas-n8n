@@ -1,55 +1,46 @@
 param(
-    [string] $OutputFolder = "C:\Users\javil\OneDrive - UNIVERSIDAD DE MURCIA\Trabajo\Digio\n8n"
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('c', 'credentials', 'w', 'workflow')]
+    [string] $Type = 'w', # Default to workflows
+
+    [string] $OutputFolder = "$PWD" # Default to current directory
 )
 
-Write-Host "Exportando todos los workflows usando Docker..."
-$backupFolder = Join-Path $OutputFolder "workflows"
+# Verificar si es credenciales o workflows
+if ($Type -eq 'c' -or $Type -eq 'credentials') {
+    $Type = 'credentials'
+    $backupFolder = Join-Path $OutputFolder "credentials"
+    Write-Host "Exportando credenciales en $backupFolder"
+} else {
+    $Type = 'workflow'
+    $backupFolder = Join-Path $OutputFolder "workflows"
+    Write-Host "Exportando workflows en $backupFolder"
+}
 
-# Crear carpeta de backup
+# Crear carpeta de backup si no existe
 if (!(Test-Path -Path $backupFolder)) {
     New-Item -ItemType Directory -Path $backupFolder | Out-Null
 }
 
-# Obtener lista de workflows desde Docker
-$workflowsList = docker-compose exec n8n n8n list:workflow
-$workflows = @()
+# Crear carpeta temporal en el contenedor
+docker-compose exec n8n mkdir -p /tmp/$Type
 
-# Parsear la salida pipe-separated (ID|Name)
-foreach ($line in $workflowsList) {
-    if ($line -and $line.Contains('|')) {
-        $parts = $line.Split('|', 2)
-        if ($parts.Length -eq 2) {
-            $workflows += [PSCustomObject]@{
-                id = $parts[0].Trim()
-                name = $parts[1].Trim()
-            }
-        }
-    }
+# Exportar todos los workflows/credenciales
+docker-compose exec n8n n8n export:$Type --all --pretty --separate --output /tmp/$Type
+
+# Copiar los archivos exportados al host
+docker cp "n8n:/tmp/$Type/." "$backupFolder"
+
+# Limpiar archivos temporales del contenedor
+docker-compose exec n8n rm -rf /tmp/$Type
+
+# Leer todos los workflows/credenciales del JSON y renombrarlos individualmente
+$items = Get-ChildItem -Path $backupFolder -Filter "*.json"
+foreach ($file in $items) {
+    $item = Get-Content $file.FullName -Raw | ConvertFrom-Json
+    $nameClean = $item.name -replace '[<>:"/\\|?*]', '_'
+    $filename = "$nameClean.json"
+    Move-Item -Path $file.FullName -Destination (Join-Path $backupFolder $filename) -Force
 }
 
-if ($workflows.Count -eq 0) {
-    Write-Host "No se encontraron workflows para exportar"
-    return
-}
-
-Write-Host "Encontrados $($workflows.Count) workflows. Exportando..."
-
-foreach ($workflow in $workflows) {
-    Write-Host "Exportando: $($workflow.name) (ID: $($workflow.id))"
-
-    # Limpiar nombre para filename
-    $cleanName = $workflow.name -replace '[<>:"/\\|?*]', '_'
-    $newFilename = "$cleanName.json"
-    
-    # Exportar workflow dentro del contenedor
-    docker-compose exec n8n n8n export:workflow --id=$($workflow.id) --output="/tmp/workflow_$($workflow.id).json" --pretty
-    
-    # Copiar del contenedor al host
-    docker cp "n8n:/tmp/workflow_$($workflow.id).json" "$backupFolder\$newFilename"
-
-    # Limpiar archivo temporal del contenedor
-    docker-compose exec n8n rm -f "/tmp/workflow_$($workflow.id).json"
-}
-
-Write-Host ""
-Write-Host "Exportación completada. Archivos guardados en: $backupFolder"
+Write-Host "Backup de $Type completo en $backupFolder"
