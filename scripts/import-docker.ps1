@@ -1,7 +1,18 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string] $InputPath
+    [string] $InputPath,
+
+    [Parameter(Mandatory = $false)]
+    [ValidateSet('c', 'credentials', 'w', 'workflows')]
+    [string] $Type = 'w' # Default to workflows
 )
+
+# Verificar si es credenciales o workflows
+if ($Type -eq 'c' -or $Type -eq 'credentials') {
+    $Type = 'credentials'
+} else {
+    $Type = 'workflow'
+}
 
 if (Test-Path $InputPath -PathType Leaf) {
     # Es un archivo único
@@ -9,34 +20,30 @@ if (Test-Path $InputPath -PathType Leaf) {
     
     # Copiar archivo al contenedor
     $filename = Split-Path $InputPath -Leaf
-    docker cp "$InputPath" "n8n:/tmp/$filename"
+    docker-compose exec n8n mkdir -p /tmp/imports
+    docker cp "$InputPath" "n8n:/tmp/imports/$filename"
     
     # Importar desde el contenedor
-    docker-compose exec n8n n8n import:workflow --input "/tmp/$filename" --force
-    
+    docker-compose exec n8n n8n import:$Type --separate --input "/tmp/imports" --force
+
     # Limpiar archivo temporal
-    docker-compose exec n8n rm -f "/tmp/$filename"
-    
+    docker-compose exec n8n rm -rf "/tmp/imports"
+
     Write-Host "Importación completada: $filename"
 }
 elseif (Test-Path $InputPath -PathType Container) {
     # Es una carpeta, importar todos los JSON
-    Write-Host "Importando todos los archivos JSON de $InputPath usando Docker..."
+    Write-Host "Importando $Type desde $InputPath usando Docker..."
     
-    Get-ChildItem -Path $InputPath -Filter *.json | ForEach-Object {
-        Write-Host "Importando $($_.Name)..."
-        
-        # Copiar archivo al contenedor
-        docker cp "$($_.FullName)" "n8n:/tmp/$($_.Name)"
-        
-        # Importar desde el contenedor
-        docker-compose exec n8n n8n import:workflow --input "/tmp/$($_.Name)" --force
-        
-        # Limpiar archivo temporal
-        docker-compose exec n8n rm -f "/tmp/$($_.Name)"
-    }
-    
-    Write-Host "Importación de carpeta completada"
+    # Copiar archivo al contenedor
+    docker cp "$InputPath" "n8n:/tmp/"
+
+    # Importar desde el contenedor
+    docker-compose exec n8n n8n import:$Type --separate --input "/tmp/$InputPath" --force
+
+    # Limpiar archivo temporal
+    docker-compose exec n8n rm -f "/tmp/$InputPath"
+
 }
 else {
     Write-Error "Ruta no válida: $InputPath"
