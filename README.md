@@ -10,6 +10,7 @@ Este repositorio está diseñado como **entorno de pruebas** para:
 - **Pruebas de control de versiones** con Git + automatización
 - **Desarrollo de convenciones** para proyectos n8n colaborativos
 - **Pruebas de integración** con nodos personalizados
+- **Escalabilidad de workers** usando Docker Compose
 
 ## 📁 Estructura del Proyecto
 
@@ -24,7 +25,8 @@ Este repositorio está diseñado como **entorno de pruebas** para:
 ├── scripts/                        # Scripts de PowerShell para gestión
 │   ├── README.md                   # Explicación de scripts
 │   ├── export*.ps1                 # Scripts de exportación
-│   └── import*.ps1                 # Scripts de importación
+│   ├── import*.ps1                 # Scripts de importación
+│   └── prueba.ps1                  # Script de prueba de workers
 │
 ├── docker-compose.yml              # Configuración de Docker para n8n
 ├── .dockerignore                   # Ignorar archivos en Docker
@@ -78,6 +80,23 @@ cp .env.example .env
 **Configuraciones principales a personalizar:**
 - `N8N_BASIC_AUTH_PASSWORD` - Contraseña de acceso
 - `N8N_ENCRYPTION_KEY` - Clave de encriptación (generar nueva)
+
+## Escalado de Workers
+Para escalar workers dinámicamente, usa la opción `--scale` de Docker Compose. Esto te permite iniciar múltiples instancias del servicio `n8n-worker`.
+
+```powershell
+# Iniciar con 3 workers
+docker-compose up -d --scale n8n-worker=3
+# Escalar a 5 workers
+docker-compose up -d --scale n8n-worker=5
+
+# Ver estado de los workers
+docker-compose ps n8n-worker
+# Ver logs de todos los workers
+docker-compose logs n8n-worker
+# Ver estado de las colas en Redis
+docker exec -it redis redis-cli LLEN bull:default:active
+```
 
 ## 🛠️ Scripts Disponibles
 
