@@ -102,6 +102,9 @@ services:
       # QUEUE MODE
       - EXECUTIONS_MODE=queue
       - QUEUE_BULL_REDIS_HOST=redis
+      # ADDITIONAL CONFIGURATION
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
+      - N8N_RUNNERS_ENABLED=true
     command: worker
 
 
