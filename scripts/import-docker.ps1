@@ -3,7 +3,7 @@ param(
     [string] $InputPath,
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet('c', 'credentials', 'w', 'workflows')]
+    [ValidateSet('c', 'credentials', 'w', 'workflow')]
     [string] $Type = 'w' # Default to workflows
 )
 
